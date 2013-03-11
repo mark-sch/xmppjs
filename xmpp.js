@@ -4,10 +4,10 @@
 // license. For more info see the COPYING file.
 
 // Node libs
-var tcp = require("tcp");
+var tcp = require("net");
 
 // External libs
-var xml = require("./node-xml/lib/node-xml");
+var xml = require("node-xml");
 var sha1 = require("./sha1");
 
 // This lib
@@ -225,12 +225,15 @@ exports.Connection.prototype = {
 	{
 		this.debug("STREAM: opened.");
 		this._setStatus(xmpp.Status.AUTHENTICATING);
-		var handshake = sha1.hex(attr.id + this.password);
-		this.debug("Calculated authentication token " + handshake
-			+ " from stream id '" + attr.id
-			+ "' and password '" + this.password + "'");
-		this.debug("Sending authentication token...");
-		this.send("<handshake>"+handshake+"</handshake>");
+		//this.debug("Calculated authentication token " + handshake
+		//	+ " from stream id '" + attr.id
+		//	+ "' and password '" + this.password + "'");
+		//this.debug("Sending authentication token...");
+		//this.send("<handshake>"+handshake+"</handshake>");
+		//this.send("<iq type='set' id='auth2'><query xmlns='jabber:iq:auth'><username>bill</username><password>Calli0pe</password><resource>globe</resource></query></iq>");
+                this.send("<iq type='get' to='zeus.think5.de' id='"+attr.id+"' xmlns='jabber:client'><query xmlns='jabber:iq:auth'><username>"+this.jid.match(/^(.*)\@.*$/)[1]+"</username></query></iq>");
+                //this.send("<iq type='set' id='auth2'><query xmlns='jabber:iq:auth'><username>guest</username><digest>"+handshake+"</digest><resource>globe</resource></query></iq>");
+
 	},
 	
 	_handle_stanza: function (stanza)
@@ -242,6 +245,13 @@ exports.Connection.prototype = {
 				this._setStatus(xmpp.Status.CONNECTED);
 			}
 		}
+                if (stanza.attr.type == "result" && stanza.children[0]) {
+                   var handshake = sha1.hex(stanza.attr.id + this.password);
+                   this.send("<iq type='set' id='"+stanza.attr.id+"'><query xmlns='jabber:iq:auth'><username>"+this.jid.match(/^(.*)\@.*$/)[1]+"</username><password>"+this.password+"</password><resource>globe</resource></query></iq>");
+                }
+                if (stanza.attr.type == "result" && !stanza.children[0]) {
+                   this._setStatus(xmpp.Status.CONNECTED);
+                }
 		this.debug("STANZA: "+stanza.toString());
 		
 		// Match and call handlers
